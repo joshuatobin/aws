@@ -14,9 +14,15 @@ action :auto_attach do
   node.set[:aws][:raid][@new_resource.mount_point] ||= {}
 
   # we're done we successfully located what we needed
-  if !already_mounted(@new_resource.mount_point) && !locate_and_mount(@new_resource.mount_point, @new_resource.filesystem, @new_resource.filesystem_options)
+  if !already_mounted(@new_resource.mount_point) && !locate_and_mount(@new_resource.mount_point, @new_resource.mount_point_owner, 
+                                                                      @new_resource.mount_point_group, @new_resource.mount_point_mode, 
+                                                                      @new_resource.filesystem, @new_resource.filesystem_options)
 
     # If we get here, we couldn't auto attach, nor re-allocate an existing set of disks to ourselves.  Auto create the md devices
+
+    # Stopping udev to ensure RAID md device allocates md0 properly
+    manage_udev("stop")
+
     create_raid_disks(@new_resource.mount_point,
                       @new_resource.mount_point_owner,
                       @new_resource.mount_point_group,
@@ -107,16 +113,47 @@ def already_mounted(mount_point)
   if !md_device || md_device == ""
     return false
   end
-
+  
   update_node_from_md_device(md_device, mount_point)
   
   return true
 end
 
+private
+def udev(cmd, log)
+  execute "#{log}" do
+    Chef::Log.debug("#{log}")
+    command "udevadm control #{cmd}"
+  end
+end
+
+def update_initramfs()
+  execute "updating initramfs" do
+    Chef::Log.debug("updating initramfs to ensure RAID config persists reboots")
+    command "update-initramfs -u"
+  end
+end
+
+def create_mdadm_conf()
+  execute "Querying md device to create mdadm.conf" do
+    command "mdadm --examine --scan | tee -a /etc/mdadm/mdadm.conf"
+  end
+end
+
+def manage_udev(action)
+  if action == "stop"
+    udev("--stop-exec-queue", "stopping udev...")
+  elsif action == "start"
+    udev("--start-exec-queue", "starting udev queued events..")
+  else
+   Chef::Log.error("Incorrect action passed to manage_udev")
+  end
+end
+
 # Attempt to find an unused data bag and mount all the EBS volumes to our system
 # Note: recovery from this assumed state is weakly untested.
 def locate_and_mount(mount_point, mount_point_owner, mount_point_group, mount_point_mode, filesystem, filesystem_options)
-  
+
   if node['aws'].nil? || node['aws']['raid'].nil? || node['aws']['raid'][mount_point].nil?
     Chef::Log.info("No mount point found '#{mount_point}' for node")
     return false
@@ -131,16 +168,26 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group, mount_po
   devices_string = device_map_to_string(node['aws']['raid'][mount_point]['device_map'])
 
   Chef::Log.info("Raid device is #{raid_dev} and mount path is #{mount_point}")
-  
+
+  # Stop udev
+  manage_udev("stop")  
+
   # Mount volumes
   mount_volumes(node['aws']['raid'][mount_point]['device_map'])
 
+  #TODO: Before we assemble the RAID we should check to see if mdadm.conf contains the device mapping
   # Assemble raid device.
   assemble_raid(raid_dev, devices_string)
-  
+
   # Now mount the drive
-  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, mount_point_mode, filesystem, filesystem_options)
-  
+  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, mount_point_mode, filesystem, filesystem_options) 
+
+  # update initramfs to ensure RAID config persists reboots
+  update_initramfs()
+
+  # Start udev back up
+  manage_udev("start")  
+
   true
 end
 
@@ -279,7 +326,7 @@ end
 
 def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_point_mode, num_disks, disk_size,
                       level, filesystem, filesystem_options, snapshots, disk_type, disk_piops)
-  
+
   creating_from_snapshot = !(snapshots.nil? || snapshots.size == 0)
 
   disk_dev = find_free_volume_device_prefix
@@ -325,17 +372,20 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       sleep 10
     end
   end
-  
+
   # Create the raid device strings w/sd => xvd correction
   devices_string = device_map_to_string(devices)
   Chef::Log.info("finished sorting devices #{devices_string}")
-
+  
   if not creating_from_snapshot
     # Create the raid device on our system
     execute "creating raid device" do
       Chef::Log.info("creating raid device /dev/#{raid_dev} with raid devices #{devices_string}")
       command "mdadm --create /dev/#{raid_dev} --level=#{level} --raid-devices=#{devices.size} #{devices_string}"
     end
+
+   # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
+   create_mdadm_conf()
   
     # NOTE: must be a better way.
     # Try to figure out the actual device.
@@ -359,12 +409,21 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       end
     end
   else
+    # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
+    create_mdadm_conf()
+  
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
   end
+
+  # start udev 
+  manage_udev("start")
   
   # Mount the device
   mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, mount_point_mode, filesystem, filesystem_options)
+
+  # update initramfs to ensure RAID config persists reboots
+  update_initramfs()
   
   # Not invoked until the volumes have been successfully created and attached
   ruby_block "databagupdate" do
