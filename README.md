@@ -154,6 +154,8 @@ Attribute Parameters:
 * `disk_type` - "standard" or "io1" (io1 is the type for IOPS volume)
 * `disk_piops` - number of Provisioned IOPS to provision per disk,
   must be > 100
+* `luks_encrypted` - Setup up a luks encrypted partition. (defaults nil)
+
 
 ## elastic_ip.rb
 
