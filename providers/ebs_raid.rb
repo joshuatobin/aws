@@ -249,17 +249,19 @@ def assemble_raid(raid_dev, devices_string)
   Chef::Log.info("Raid device #{raid_dev} does not exist re-assembling")
   Chef::Log.debug("Devices for #{raid_dev} are #{devices_string}")
 
-  # We have to grab the UUID of the device or the RAID will try and assemble with the UUID stored
-  # the superblock metadata, causing the md_device to be randomly chosen.
-  uuid = `mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g'`
   # Now that attach is done we re-build the md device
+  # We have to grab the UUID of the md device or the disks will be assembled with the UUID stored
+  # within the superblock metadata, causing the md_device number to be randomly 
+  # chosen if restore is happening on a different host
   execute "re-attaching raid device" do
-    command "mdadm --assemble --uuid=#{uuid} #{raid_dev} #{devices_string}"
+    command <<-EOH
+      uuid=$(mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g') \
+      mdadm --assemble --uuid=#{uuid} #{raid_dev} #{devices_string}"
+    EOH
     # mdadm may return 2 but still return a clean raid device.
     returns [0, 2]
   end
 end
-
 
 def mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, mount_point_mode, filesystem, filesystem_options)
   # Create the mount point
