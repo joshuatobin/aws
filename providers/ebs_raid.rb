@@ -410,7 +410,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
     end
   else
     # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
-    create_mdadm_conf()
+    #create_mdadm_conf()
   
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
