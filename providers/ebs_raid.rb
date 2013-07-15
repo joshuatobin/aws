@@ -255,8 +255,8 @@ def assemble_raid(raid_dev, devices_string)
   # chosen if restore is happening on a different host
   execute "re-attaching raid device" do
     command <<-EOH
-      uuid=$(mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g') \
-      mdadm --assemble --uuid=#{uuid} #{raid_dev} #{devices_string}"
+      UUID=$(mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g') \
+      mdadm --assemble --uuid=$UUID #{raid_dev} #{devices_string}"
     EOH
     # mdadm may return 2 but still return a clean raid device.
     returns [0, 2]
