@@ -134,12 +134,6 @@ def update_initramfs()
   end
 end
 
-def create_mdadm_conf()
-  execute "Querying md device to create mdadm.conf" do
-    command "mdadm --examine --scan | tee -a /etc/mdadm/mdadm.conf"
-  end
-end
-
 def manage_udev(action)
   if action == "stop"
     udev("--stop-exec-queue", "stopping udev...")
@@ -254,10 +248,13 @@ def assemble_raid(raid_dev, devices_string)
   
   Chef::Log.info("Raid device #{raid_dev} does not exist re-assembling")
   Chef::Log.debug("Devices for #{raid_dev} are #{devices_string}")
-  
+
+  # We have to grab the UUID of the device or the RAID will try and assemble with the UUID stored
+  # the superblock metadata, causing the md_device to be randomly chosen.
+  uuid = `mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g'`
   # Now that attach is done we re-build the md device
   execute "re-attaching raid device" do
-    command "mdadm --assemble #{raid_dev} #{devices_string}"
+    command "mdadm --assemble --uuid=#{uuid} #{raid_dev} #{devices_string}"
     # mdadm may return 2 but still return a clean raid device.
     returns [0, 2]
   end
@@ -384,9 +381,6 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       command "mdadm --create /dev/#{raid_dev} --level=#{level} --raid-devices=#{devices.size} #{devices_string}"
     end
 
-   # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
-   #create_mdadm_conf()
-  
     # NOTE: must be a better way.
     # Try to figure out the actual device.
     ruby_block "formatting md device in #{new_resource.name}" do
@@ -409,9 +403,6 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       end
     end
   else
-    # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
-    #create_mdadm_conf()
-  
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
   end
