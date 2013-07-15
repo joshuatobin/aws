@@ -121,8 +121,8 @@ end
 
 private
 def udev(cmd, log)
-  execute "#{log}" do
-    Chef::Log.debug("#{log}")
+  execute log do
+    Chef::Log.debug(log)
     command "udevadm control #{cmd}"
   end
 end
@@ -146,7 +146,7 @@ def manage_udev(action)
   elsif action == "start"
     udev("--start-exec-queue", "starting udev queued events..")
   else
-   Chef::Log.error("Incorrect action passed to manage_udev")
+   Chef::Log.fatal("Incorrect action passed to manage_udev")
   end
 end
 
@@ -385,7 +385,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
     end
 
    # Create the mdadm.conf to ensure the md device doesn't get reset on reboot
-   create_mdadm_conf()
+   #create_mdadm_conf()
   
     # NOTE: must be a better way.
     # Try to figure out the actual device.
