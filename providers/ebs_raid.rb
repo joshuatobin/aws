@@ -254,10 +254,7 @@ def assemble_raid(raid_dev, devices_string)
   # within the superblock metadata, causing the md_device number to be randomly 
   # chosen if restore is happening on a different host
   execute "re-attaching raid device" do
-    command <<-EOH
-      UUID=`mdadm --examine --scan|awk '{print $4}'|sed 's/UUID=//g'` \
-      mdadm --assemble --uuid=#{UUID} #{raid_dev} #{devices_string}"
-    EOH
+    command "mdadm -A -uuid=`mdadm -E --scan|awk '{print $4}'|sed 's/UUID=//g'` #{raid_dev} #{devices_string}"
     # mdadm may return 2 but still return a clean raid device.
     returns [0, 2]
   end
