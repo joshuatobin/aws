@@ -137,6 +137,8 @@ def already_mounted(mount_point, encrypted, dm_name)
   #TODO :Add a check to see if the dm-0 exists if we're encrypted
   if encrypted
     dm_device = dm_device_from_dm_name(dm_name)
+    puts "dm_device:"
+    puts dm_device
     if !dm_device || dm_device == ""
       Chef::Log.info("Didn't find a device mapper")
       return false
