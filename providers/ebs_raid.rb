@@ -138,6 +138,7 @@ def already_mounted(mount_point, encrypted, dm_name)
   if encrypted
     dm_device = dm_device_from_dm_name(dm_name)
     if !dm_device || dm_device == ""
+      Chef::Log.info("Didn't find a device mapper")
       return false
     else
       node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
@@ -149,6 +150,7 @@ def already_mounted(mount_point, encrypted, dm_name)
   
   md_device = md_device_from_mount_point(mount_point)
   if !md_device || md_device == ""
+    Chef::Log.info("Didn't find a md device")
     return false
   end
 
