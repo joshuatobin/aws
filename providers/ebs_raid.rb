@@ -461,7 +461,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       end
       
       execute "unlocking encrypted partition" do
-        command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} /dev/mapper/#{dm_name} --key-file=-"
+        command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
       end
     end
 
