@@ -94,7 +94,7 @@ def find_free_md_device_name
 end
 
 def verify_device_from_mount_point(mount_point, encrypted)
-  dm_device = ""
+  device = ""
   if encrypted
     glob = "/dev/dm-[0-9]*"
   else
