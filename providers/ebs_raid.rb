@@ -93,32 +93,22 @@ def find_free_md_device_name
   dir[5, dir.length]
 end
 
-def dm_device_from_dm_name(dm_name)
+def verify_device_from_mount_point(mount_point, encrypted)
   dm_device = ""
-  Dir.glob("/dev/dm-[0-9]*").each do |dir|
-    puts "dm_device from dn name, before if"
-    puts dir
-    if ::File.lstat(dir).rdev == ::File.lstat("/dev/mapper/#{dm_name}").dev
-      puts "made it here"
-      dm_device = dir
-      break
-    end
+  if encrypted
+    glob = "/dev/dm-[0-9]*"
+  else
+    glob = "/dev/md[0-9]*"
   end
-  Chef::Log.info("Found device mapper /dev/mapper/#{dm_name}")
-  dm_device
-end
 
-def md_device_from_mount_point(mount_point)
-  md_device = ""
-  Dir.glob("/dev/md[0-9]*").each do |dir|
-    # Look at the mount point directory and see if containing device
-    # is the same as the md device.
+  Dir.glob(glob).each do |dir|
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
-      md_device = dir
+      device = dir
       break
     end
   end
-  md_device
+  Chef::Log.info("#{device}")
+  device
 end
 
 def update_node_from_md_device(md_device, mount_point)
@@ -137,26 +127,16 @@ def already_mounted(mount_point, encrypted, dm_name)
     return false
   end
   
-  #TODO :Add a check to see if the dm-0 exists if we're encrypted
-  if encrypted
-    dm_device = dm_device_from_dm_name(dm_name)
-    puts "dm_device:"
-    puts dm_device
-    if !dm_device || dm_device == ""
-      Chef::Log.info("Didn't find a device mapper")
-      return false
-    else
-      node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
-      Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
-    end
+  device = verify_device_from_mount_point(mount_point, encrypted)
+  if !device || device == ""
+    Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
+    return false
   end
 
-  # Need to run this check too without duplicating code
-  
-  md_device = md_device_from_mount_point(mount_point)
-  if !md_device || md_device == ""
-    Chef::Log.info("Didn't find a md device")
-    return false
+  #TODO :Add a check to see if the dm-0 exists if we're encrypted
+  if encrypted
+    node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
+    Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
   end
 
   update_node_from_md_device(md_device, mount_point)
