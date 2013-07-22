@@ -226,7 +226,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
     Chef::Log.inf("dm-crypt mapping /dev/mapper/#{dm_name} to mount point #{mount_point}")
 
     execute "unlocking encrypted partition" do
-      command "cat #{encryption_passwd} | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
+      command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
     end
   else
     Chef::Log.info("Raid device is #{raid_dev} and mount path is #{mount_point}")
@@ -457,11 +457,11 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
 
     if encrypted
       execute "creating luks encrypted partition" do
-        command "cat #{encryption_passwd} | cryptsetup -v -q luksFormat /dev/#{raid_dev} --key-file=-"
+        command "echo '#{encryption_passwd}' | cryptsetup -v -q luksFormat /dev/#{raid_dev} --key-file=-"
       end
       
       execute "unlocking encrypted partition" do
-        command "cat #{encryption_passwd} | cryptsetup -q luksOpen /dev/#{raid_dev} /dev/mapper/#{dm_name} --key-file=-"
+        command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} /dev/mapper/#{dm_name} --key-file=-"
       end
     end
 
