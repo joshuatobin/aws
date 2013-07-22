@@ -154,6 +154,8 @@ Attribute Parameters:
 * `disk_type` - "standard" or "io1" (io1 is the type for IOPS volume)
 * `disk_piops` - number of Provisioned IOPS to provision per disk,
   must be > 100
+* `encrypted` - Sets up encryption with cryptsetup/dm-crypt via device-mapper using Luks. (Default: false)
+* `encryption_mount_point` - The device mapper mount point. (Default: '/dev/mapper/secure')
 
 ## elastic_ip.rb
 
