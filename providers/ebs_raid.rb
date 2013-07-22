@@ -520,19 +520,15 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       # Assemble all the data bag meta data
       node.set[:aws][:raid][mount_point][:raid_dev] = raid_dev
       node.set[:aws][:raid][mount_point][:device_map] = devices
+
       if encrypted
         node.set[:aws][:raid][encrypted][:dm_device] = dm_device
         # TODO Check if we need to do this. Prob not....
         node.set[:aws][:raid][encrypted][:dm_name] = dm_name
-      node.save
+        node.save
+      end
+
     end
   end
-
 end
-
-
-
-
-
-
 
