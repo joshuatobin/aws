@@ -135,6 +135,7 @@ def already_mounted(mount_point, encrypted, dm_name)
 
   #TODO :Add a check to see if the dm-0 exists if we're encrypted
   if encrypted
+    dm_device = device
     node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
     Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
   end
