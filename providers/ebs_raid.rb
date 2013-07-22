@@ -471,7 +471,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       block do
         if encrypted
           device = "/dev/mapper/#{dm_name}"
-          Chef::Log.fatal("More than one /dev/dm-X device found") unless ::File.exists("/dev/mapper/#{dm_name}")
+          Chef::Log.fatal("More than one /dev/dm-X device found") unless device.nil?
         else
           device = nil
           Dir.glob("/dev/md[0-9]*").each do |dir|
