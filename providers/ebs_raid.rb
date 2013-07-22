@@ -95,7 +95,7 @@ end
 
 def dm_device_from_dm_name(dm_name)
   dm_device = ""
-  Dir.glob("/dev/dm\-[0-9]*").each do |dir|
+  Dir.glob("/dev/dm-[0-9]*").each do |dir|
     puts dir
     if ::File.lstat(dir).rdev == ::File.lstat("/dev/mapper/#{dm_name}").dev
       puts "made it here"
