@@ -96,11 +96,12 @@ end
 def dm_device_from_dm_name(dm_name)
   dm_device = ""
   Dir.glob("/dev/dm\-[0-9]*").each do |dir|
-    if ::File.lstat(dir).rdev == ::File.lstat("/dev/mapper/#{dn_name}").dev
+    if ::File.lstat(dir).rdev == ::File.lstat("/dev/mapper/#{dm_name}").dev
       dm_device = dir
       break
     end
   end
+  Chef::Log.info("Found device mapper #{dn_name}")
   dm_device
 end
 
