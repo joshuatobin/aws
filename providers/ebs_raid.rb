@@ -101,7 +101,7 @@ def dm_device_from_dm_name(dm_name)
       break
     end
   end
-  Chef::Log.info("Found device mapper #{dn_name}")
+  Chef::Log.info("Found device mapper #{dm_name}")
   dm_device
 end
 
