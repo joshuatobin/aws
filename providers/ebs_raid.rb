@@ -137,12 +137,17 @@ def already_mounted(mount_point, encrypted, dm_name)
   end
   
   devices = verify_md_device_from_mp(mount_point)
+  puts devices
   if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
     Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
     return false
   end
 
   md_device = devices['md']
+
+
+  puts md_device
+  puts 'updating node'
   update_node_from_md_device(md_device, mount_point)
 
   if encrypted
@@ -151,6 +156,8 @@ def already_mounted(mount_point, encrypted, dm_name)
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
     end
+
+    puts dm
 
     dm_device = devices['dm']
     node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
