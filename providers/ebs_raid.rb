@@ -98,14 +98,17 @@ def verify_dm_device_from_mp(mount_point, dm_name)
   Dir.glob("/dev/dm-[0-9]*").each do |dir|
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
       dm_device = dir
+      Chef::Log.info("Verified #{dm_device} linked to #{mount_point}") unless dm_device.nil?
       break
     end
   end
-  Chef::Log.info("Verified #{dm_device} linked to #{mount_point}") unless dm_device.nil?
 
   devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
   devices['dm'] = dm_device
   devices
+  puts "found devices ********************"
+  puts devices
+
 end
 
 def verify_md_device_from_mp(mount_point)
