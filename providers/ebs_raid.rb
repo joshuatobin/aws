@@ -237,7 +237,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
     dm_device = node['aws']['raid']['encrypted']['dm_device']
     dm_name = node['aws']['raid']['encrypted']['dm_name']
     Chef::Log.info("Encrypted raid. Mapping #{dm_device} to RAID device #{raid_dev}.")
-    Chef::Log.inf("dm-crypt mapping /dev/mapper/#{dm_name} to mount point #{mount_point}")
+    Chef::Log.info("dm-crypt mapping /dev/mapper/#{dm_name} to mount point #{mount_point}")
 
     execute "unlocking encrypted partition" do
       command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
@@ -461,6 +461,8 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
   # Create the raid device strings w/sd => xvd correction
   devices_string = device_map_to_string(devices)
   Chef::Log.info("finished sorting devices #{devices_string}")
+  
+  puts "**** creating from snapshot is: #{creating_from_snapshot}"
 
   if not creating_from_snapshot
     # Create the raid device on our system
@@ -508,6 +510,10 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
   else
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
+
+    execute "unlocking encrypted partition" do
+      command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
+    end
   end
 
   # start udev
