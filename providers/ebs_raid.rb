@@ -131,6 +131,7 @@ def update_node_from_md_device(md_device, mount_point)
   raid_devices = `#{command}`
   Chef::Log.info("already found the mounted device, created from #{raid_devices}")
 
+  Chef::Log.info("Updating node attributes for md device '#{md_device}' and disks '#{raid_devices}'")
   node.set[:aws][:raid][mount_point][:raid_dev] = md_device.sub(/\/dev\//,"")
   node.set[:aws][:raid][mount_point][:devices] = raid_devices
   node.save
@@ -144,12 +145,10 @@ def already_mounted(mount_point, encrypted, dm_name)
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
-    puts "already_mounted -> dm is #{dm}"
     if dm.empty? || ! dm.has_key?('dm') || dm['dm'].nil? || ! dm.has_key?('md') || dm['md'].empty? 
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
     end
-    puts "already_mounted -> dm is #{dm}"
 
     node.set[:aws][:raid][:encrypted][:dm_device] = dm['dm'].sub(/\/dev\//,"")  
     Chef::Log.info("Updating node attribute dm_device to #{dm['dm']}")
