@@ -94,7 +94,7 @@ def find_free_md_device_name
 end
 
 def verify_dm_device_from_mp(mount_point, dm_name)
-  devices = Hash.new
+  devices = {}
   Dir.glob("/dev/dm-[0-9]*").each do |dir|
     # First we check that the private crypsetup device lstat matches our mount point
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
@@ -106,7 +106,7 @@ def verify_dm_device_from_mp(mount_point, dm_name)
       devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
       
       Chef::Log.info("Verified /dev/mapper/#{dm_name} crypsetup relationship to #{devices['md']}") 
-      devices
+      return devices
       break
     end
   end
