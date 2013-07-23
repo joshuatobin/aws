@@ -93,21 +93,29 @@ def find_free_md_device_name
   dir[5, dir.length]
 end
 
-def verify_device_from_mount_point(mount_point, encrypted)
-  device = ""
-  if encrypted
-    glob = "/dev/dm-[0-9]*"
-  else
-    glob = "/dev/md[0-9]*"
+def verify_dm_device_from_mp(mount_point, dm_name)
+  devices = Hash.new
+  Dir.glob("/dev/dm-[0-9]*").each do |dir|
+    if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
+      dm_device = dir
+      break
+    end
   end
+  Chef::Log.info("Verified #{dm_device} linked to #{mount_point}") unless dm_device.nil?
 
-  Dir.glob(glob).each do |dir|
+  devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
+  devices['dm'] = dm_device
+  devices
+end
+
+def verify_md_device_from_mp(mount_point)
+  Dir.glob("/dev/md[0-9]*").each do |dir|
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
       device = dir
       break
     end
   end
-  Chef::Log.info("#{device}")
+  Chef::Log.info("Verified #{device} linked to #{mount_point}") unless device.nil?
   device
 end
 
@@ -127,20 +135,27 @@ def already_mounted(mount_point, encrypted, dm_name)
     return false
   end
   
-  device = verify_device_from_mount_point(mount_point, encrypted)
-  if !device || device == ""
+  devices = verify_md_device_from_mp(mount_point)
+  if ! devices.values.all? {|x| !x.empty?} || ! devices.has_key?('md') 
     Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
     return false
   end
 
-  #TODO :Add a check to see if the dm-0 exists if we're encrypted
+  md_device = devices['md']
+  update_node_from_md_device(md_device, mount_point)
+
   if encrypted
-    dm_device = device
+    dm = verify_dm_device_from_mp(mount_point)
+    if ! dm.values.all? {|x| !x.empty?} || ! dm.has_key?('md') || ! dm.has_key('dm')
+      Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
+      return false    
+    end
+
+    dm_device = devices['dm']
     node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
+
     Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
   end
-
-  update_node_from_md_device(md_device, mount_point)
 
   return true
 end
@@ -194,7 +209,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
       return false
     end
   end
-
+heh
 
   raid_dev = node['aws']['raid'][mount_point]['raid_dev']
   devices_string = device_map_to_string(node['aws']['raid'][mount_point]['device_map'])
@@ -460,6 +475,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       block do
         if encrypted
           device = "/dev/mapper/#{dm_name}"
+          #TODO file.exists("#{dm_name}")
           Chef::Log.fatal("More than one /dev/dm-X device found") unless device.nil?
         else
           device = nil
