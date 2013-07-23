@@ -98,13 +98,13 @@ def verify_dm_device_from_mp(mount_point, dm_name)
   Dir.glob("/dev/dm-[0-9]*").each do |dir|
     # First we check that the private crypsetup device lstat matches our mount point
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
-      devices['dm'] = dir.strip
+      devices['dm'] = dir.gsub("\n","")
       
       Chef::Log.info("Verified #{devices['dm']} lstat link to #{mount_point}") 
 
       # Next we sanity check the md device of what crypsetup is using
-      devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
-      devices['md'].strip
+      md = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
+      devices['md'] = md.gsub("\n", "")
 
       Chef::Log.info("Verified /dev/mapper/#{dm_name} crypsetup relationship to #{devices['md']}") 
       return devices
