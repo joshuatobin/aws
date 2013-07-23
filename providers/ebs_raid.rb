@@ -145,7 +145,7 @@ def already_mounted(mount_point, encrypted, dm_name)
   update_node_from_md_device(md_device, mount_point)
 
   if encrypted
-    dm = verify_dm_device_from_mp(mount_point)
+    dm = verify_dm_device_from_mp(mount_point, dm_name)
     if ! dm.values.all? {|x| !x.empty?} || ! dm.has_key?('md') || ! dm.has_key('dm')
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
