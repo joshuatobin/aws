@@ -137,7 +137,7 @@ def already_mounted(mount_point, encrypted, dm_name)
   end
   
   devices = verify_md_device_from_mp(mount_point)
-  if ! devices.values.all? {|x| !x.empty?} || ! devices.has_key?('md') 
+  if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
     Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
     return false
   end
@@ -147,7 +147,7 @@ def already_mounted(mount_point, encrypted, dm_name)
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
-    if ! dm.values.all? {|x| !x.empty?} || ! dm.has_key?('md') || ! dm.has_key('dm')
+    if ! dm.empty?|| ! dm.has_key?('md') || dm.['md'].empty?
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
     end
