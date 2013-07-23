@@ -20,7 +20,7 @@ action :auto_attach do
   node.set[:aws][:raid][@new_resource.mount_point] ||= {}
 
   # Encryption information
-  node.set[:aws][:raid][@new_resource.encrypted] ||= {}
+  node.set[:aws][:raid][:encrypted] ||= {}
 
   # we're done we successfully located what we needed
   if !already_mounted(@new_resource.mount_point, @new_resource.encrypted, @new_resource.dm_name) && !locate_and_mount(@new_resource.mount_point, @new_resource.mount_point_owner,
@@ -96,19 +96,20 @@ end
 def verify_dm_device_from_mp(mount_point, dm_name)
   devices = Hash.new
   Dir.glob("/dev/dm-[0-9]*").each do |dir|
+    # First we check that the private crypsetup device lstat matches our mount point
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
-      dm_device = dir
-      Chef::Log.info("Verified #{dm_device} linked to #{mount_point}") unless dm_device.nil?
+      devices['dm'] = dir
+      
+      Chef::Log.info("Verified #{devices['dm']} lstat link to #{mount_point}") 
+
+      # Next we sanity check the md device of what crypsetup is using
+      devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
+      
+      Chef::Log.info("Verified /dev/mapper/#{dm_name} crypsetup relationship to #{devices['md']}") 
+      devices
       break
     end
   end
-
-  devices['md'] = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
-  devices['dm'] = dm_device
-  devices
-  puts "found devices ********************"
-  puts devices
-
 end
 
 def verify_md_device_from_mp(mount_point)
@@ -140,30 +141,23 @@ def already_mounted(mount_point, encrypted, dm_name)
   end
   
   devices = verify_md_device_from_mp(mount_point)
-  puts devices
   if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
     Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
     return false
   end
 
   md_device = devices['md']
-
-
-  puts md_device
-  puts 'updating node'
   update_node_from_md_device(md_device, mount_point)
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
-    if ! dm.empty?|| ! dm.has_key?('md') || dm['md'].empty?
+    if dm.empty? || ! dm.has_key?('dm') || dm['dm'].empty?
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
     end
 
-    puts dm
-
     dm_device = devices['dm']
-    node.set[:aws][:raid][encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
+    node.set[:aws][:raid][:encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
 
     Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
   end
