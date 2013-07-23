@@ -141,6 +141,8 @@ def already_mounted(mount_point, encrypted, dm_name)
   end
   
   devices = verify_md_device_from_mp(mount_point)
+  puts "already_mounted -> devices is #{devices}"
+  
   if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
     Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
     return false
