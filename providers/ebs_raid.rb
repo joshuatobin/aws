@@ -209,7 +209,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
   end
 
   if encrypted
-    if node['aws']['raid'][encrypted]['dm_device'].nil? || node['aws']['raid'][mount_point]['raid_dev'].nil? || node['aws']['raid'][mount_point]['device_map'].nil?
+    if node['aws']['raid']['encrypted']['dm_device'].nil? || node['aws']['raid'][mount_point]['raid_dev'].nil? || node['aws']['raid'][mount_point]['device_map'].nil?
 
       Chef::Log.info("No dm mapper or RAID device found for encrypted mount point /dev/mapper/#{dm_name} for node")
       return false
