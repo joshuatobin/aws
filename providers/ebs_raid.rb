@@ -511,8 +511,10 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
 
-    execute "unlocking encrypted partition" do
-      command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
+    if encrypted 
+      execute "unlocking encrypted partition" do
+        command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
+      end
     end
   end
 
