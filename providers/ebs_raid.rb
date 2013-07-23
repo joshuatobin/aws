@@ -141,7 +141,6 @@ def already_mounted(mount_point, encrypted, dm_name)
   if !::File.exists?(mount_point)
     return false
   end
-  
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
@@ -210,8 +209,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
   end
 
   if encrypted
-    if node['aws']['raid'][encrypted]['dm_device'].nil? || \
-      node['aws']['raid'][mount_point]['raid_dev'].nil? || node['aws']['raid'][mount_point]['device_map'].nil?
+    if node['aws']['raid'][encrypted]['dm_device'].nil? || node['aws']['raid'][mount_point]['raid_dev'].nil? || node['aws']['raid'][mount_point]['device_map'].nil?
 
       Chef::Log.info("No dm mapper or RAID device found for encrypted mount point /dev/mapper/#{dm_name} for node")
       return false
@@ -222,7 +220,6 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
       return false
     end
   end
-heh
 
   raid_dev = node['aws']['raid'][mount_point]['raid_dev']
   devices_string = device_map_to_string(node['aws']['raid'][mount_point]['device_map'])
