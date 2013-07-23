@@ -140,29 +140,34 @@ def already_mounted(mount_point, encrypted, dm_name)
     return false
   end
   
-  devices = verify_md_device_from_mp(mount_point)
-  puts "already_mounted -> devices is #{devices}"
-  
-  if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
-    Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
-    return false
-  end
-
-  md_device = devices['md']
-  update_node_from_md_device(md_device, mount_point)
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
-    if dm.empty? || ! dm.has_key?('dm') || dm['dm'].empty?
+    if dm.empty? || ! dm.has_key?('dm') || dm['dm'].empty? || ! dm.has_key?('md') || dm['md'].empty? 
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
       return false    
     end
+    puts "already_mounted -> dm is #{dm}"
 
-    dm_device = devices['dm']
-    node.set[:aws][:raid][:encrypted][:dm_device] = dm_device.sub(/\/dev\//,"")  
+    node.set[:aws][:raid][:encrypted][:dm_device] = dm['dm'].sub(/\/dev\//,"")  
+    Chef::Log.info("Updating node attribute dm_device to #{dm['dm']}")
 
-    Chef::Log.info("Updating node attribute dm_device to #{dm_device}")
+    update_node_from_md_device(dm['md'], mount_point)
+    
+  else
+    devices = verify_md_device_from_mp(mount_point)
+    puts "already_mounted -> devices is #{devices}"
+  
+    if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
+      Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
+      return false
+    end
+
+    md_device = devices['md']
+    update_node_from_md_device(md_device, mount_point)
   end
+
+
 
   return true
 end
