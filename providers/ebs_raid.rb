@@ -109,6 +109,7 @@ def verify_dm_device_from_mp(mount_point, dm_name)
 end
 
 def verify_md_device_from_mp(mount_point)
+  device = ""
   Dir.glob("/dev/md[0-9]*").each do |dir|
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
       device = dir
