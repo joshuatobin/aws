@@ -114,16 +114,16 @@ def verify_dm_device_from_mp(mount_point, dm_name)
 end
 
 def verify_md_device_from_mp(mount_point)
-  device = ""
+  device = {}
   Dir.glob("/dev/md[0-9]*").each do |dir|
     # Look at the mount point directory and see if containing device
-    # is the same as the md device.
+    # is the same as the md device by comparing lstat ID's.
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
-      device = dir
+      device['md'] = dir.gsub("\n", "")
+      Chef::Log.info("Verified #{device['md']} linked to #{mount_point}") unless device.nil?
       break
     end
   end
-  Chef::Log.info("Verified #{device} linked to #{mount_point}") unless device.nil?
   device
 end
 
@@ -164,8 +164,7 @@ def already_mounted(mount_point, encrypted, dm_name)
       return false
     end
 
-    md_device = devices['md']
-    update_node_from_md_device(md_device, mount_point)
+    update_node_from_md_device(devices['md'], mount_point)
   end
 
   return true
