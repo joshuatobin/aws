@@ -116,9 +116,9 @@ end
 def verify_md_device_from_mp(mount_point)
   device = ""
   Dir.glob("/dev/md[0-9]*").each do |dir|
+    # Look at the mount point directory and see if containing device
+    # is the same as the md device.
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
-      # Look at the mount point directory and see if containing device
-      # is the same as the md device.
       device = dir
       break
     end
