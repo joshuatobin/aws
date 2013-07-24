@@ -155,7 +155,7 @@ Attribute Parameters:
 * `disk_piops` - number of Provisioned IOPS to provision per disk,
   must be > 100
 
-### Encryption 
+#### Encryption 
 Encryption of EBS volumes is supported at this time with Luks Encryption only. To enable, set the `encrypted` resource to true,
 and provide the `encryption_passwd`. The password is called during partition creation and then again required each time
 device mapper `'/dev/mapper/#{dm_name}'` is mounted. `encryption_passwd` is piped to cryptsetup on stdin, therefore never stored
