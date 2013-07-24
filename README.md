@@ -162,7 +162,7 @@ device mapper `'/dev/mapper/#{dm_name}'` is mounted. `encryption_passwd` is pipe
 on disk in plain-text.
 
 * `encrypted` - Sets up encryption with cryptsetup/dm-crypt via device-mapper using Luks. (Default: false)
-* `encryption_passwd` - The device mapper mount point. (Default: '/dev/mapper/secure')
+* `encryption_passwd` - Password need to encrypt the partition. (Default: nil)
 * `dm_name` - The device mapper friendly alias, which maps to '/dev/mapper/#{dm_name}' (Default: 'secure')
 
 ## elastic_ip.rb
