@@ -24,10 +24,10 @@ action :auto_attach do
 
   # we're done we successfully located what we needed
   if !already_mounted(@new_resource.mount_point, @new_resource.encrypted, @new_resource.dm_name) && !locate_and_mount(@new_resource.mount_point, @new_resource.mount_point_owner,
-                                                                  @new_resource.mount_point_group, @new_resource.mount_point_mode,
-                                                                  @new_resource.filesystem, @new_resource.filesystem_options,
-                                                                  @new_resource.encrypted, @new_resource.encryption_passwd,
-                                                                  @new_resource.dm_name)
+                                                                                                                      @new_resource.mount_point_group, @new_resource.mount_point_mode,
+                                                                                                                      @new_resource.filesystem, @new_resource.filesystem_options,
+                                                                                                                      @new_resource.encrypted, @new_resource.encryption_passwd,
+                                                                                                                      @new_resource.dm_name)
 
     # If we get here, we couldn't auto attach, nor re-allocate an existing set of disks to ourselves.  Auto create the md devices
 
@@ -117,6 +117,8 @@ def verify_md_device_from_mp(mount_point)
   device = ""
   Dir.glob("/dev/md[0-9]*").each do |dir|
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
+      # Look at the mount point directory and see if containing device
+      # is the same as the md device.
       device = dir
       break
     end
@@ -156,7 +158,6 @@ def already_mounted(mount_point, encrypted, dm_name)
 
   else
     devices = verify_md_device_from_mp(mount_point)
-    puts "already_mounted -> devices is #{devices}"
 
     if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
       Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
@@ -166,8 +167,6 @@ def already_mounted(mount_point, encrypted, dm_name)
     md_device = devices['md']
     update_node_from_md_device(md_device, mount_point)
   end
-
-
 
   return true
 end
@@ -236,6 +235,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
   if encrypted
     dm_device = node['aws']['raid']['encrypted']['dm_device']
     dm_name = node['aws']['raid']['encrypted']['dm_name']
+
     Chef::Log.info("Encrypted raid. Mapping #{dm_device} to RAID device #{raid_dev}.")
     Chef::Log.info("dm-crypt mapping /dev/mapper/#{dm_name} to mount point #{mount_point}")
 
@@ -370,7 +370,6 @@ def mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group,
 
       Chef::Log.info("Attempting to mount #{mount_point} to #{device}")
       system("mount -t #{filesystem} -o #{filesystem_options} #{device} #{mount_point}")
-
     end
   end
 end
@@ -462,8 +461,6 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
   devices_string = device_map_to_string(devices)
   Chef::Log.info("finished sorting devices #{devices_string}")
 
-  puts "**** creating from snapshot is: #{creating_from_snapshot}"
-
   if not creating_from_snapshot
     # Create the raid device on our system
     execute "creating raid device" do
@@ -487,8 +484,6 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       block do
         if encrypted
           device = "/dev/mapper/#{dm_name}"
-          #TODO file.exists("#{dm_name}")
-          Chef::Log.fatal("More than one /dev/dm-X device found") unless device.nil?
         else
           device = nil
           Dir.glob("/dev/md[0-9]*").each do |dir|
@@ -543,10 +538,10 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       # Assemble all the data bag meta data
       node.set[:aws][:raid][mount_point][:raid_dev] = raid_dev
       node.set[:aws][:raid][mount_point][:device_map] = devices
+      node.save
 
       if encrypted
         node.set[:aws][:raid][:encrypted][:dm_device] = dm_device
-        # TODO Check if we need to do this. Prob not....
         node.set[:aws][:raid][:encrypted][:dm_name] = dm_name
         node.save
       end
