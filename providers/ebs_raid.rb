@@ -99,14 +99,14 @@ def verify_dm_device_from_mp(mount_point, dm_name)
     # First we check that the private crypsetup device lstat matches our mount point
     if ::File.lstat(dir).rdev == ::File.lstat(mount_point).dev
       devices['dm'] = dir.gsub("\n","")
-      
-      Chef::Log.info("Verified #{devices['dm']} lstat link to #{mount_point}") 
+
+      Chef::Log.info("Verified #{devices['dm']} lstat link to #{mount_point}")
 
       # Next we sanity check the md device of what crypsetup is using
       md = `cryptsetup status #{dm_name}|grep device|awk '{print $2}'`
       devices['md'] = md.gsub("\n", "")
 
-      Chef::Log.info("Verified /dev/mapper/#{dm_name} crypsetup relationship to #{devices['md']}") 
+      Chef::Log.info("Verified /dev/mapper/#{dm_name} crypsetup relationship to #{devices['md']}")
       return devices
       break
     end
@@ -144,20 +144,20 @@ def already_mounted(mount_point, encrypted, dm_name)
 
   if encrypted
     dm = verify_dm_device_from_mp(mount_point, dm_name)
-    if dm.empty? || ! dm.has_key?('dm') || dm['dm'].nil? || ! dm.has_key?('md') || dm['md'].empty? 
+    if dm.empty? || ! dm.has_key?('dm') || dm['dm'].nil? || ! dm.has_key?('md') || dm['md'].empty?
       Chef::Log.info("Could not map a working md or device mapper to the mount point: #{mount_point}")
-      return false    
+      return false
     end
 
-    node.set[:aws][:raid][:encrypted][:dm_device] = dm['dm'].sub(/\/dev\//,"")  
+    node.set[:aws][:raid][:encrypted][:dm_device] = dm['dm'].sub(/\/dev\//,"")
     Chef::Log.info("Updating node attribute dm_device to #{dm['dm']}")
 
     update_node_from_md_device(dm['md'], mount_point)
-    
+
   else
     devices = verify_md_device_from_mp(mount_point)
     puts "already_mounted -> devices is #{devices}"
-  
+
     if devices.empty? || ! devices.has_key?('md') || devices['md'].empty?
       Chef::Log.info("Could not map a working device from the mount point: #{mount_point}")
       return false
@@ -199,7 +199,7 @@ end
 
 # Attempt to find an unused data bag and mount all the EBS volumes to our system
 # Note: recovery from this assumed state is weakly untested.
-def locate_and_mount(mount_point, mount_point_owner, mount_point_group, 
+def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
                      mount_point_mode, filesystem, filesystem_options,
                      encrypted, encryption_passwd, dm_name)
 
@@ -247,7 +247,7 @@ def locate_and_mount(mount_point, mount_point_owner, mount_point_group,
   end
 
   # Now mount the drive
-  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, 
+  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group,
                mount_point_mode, filesystem, filesystem_options,
                encrypted, dm_name)
 
@@ -335,7 +335,7 @@ def assemble_raid(raid_dev, devices_string)
   end
 end
 
-def mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, 
+def mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group,
                  mount_point_mode, filesystem, filesystem_options,
                  encrypted, dm_name)
 
@@ -367,7 +367,7 @@ def mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group,
       else
         device = md_device
       end
-      
+
       Chef::Log.info("Attempting to mount #{mount_point} to #{device}")
       system("mount -t #{filesystem} -o #{filesystem_options} #{device} #{mount_point}")
 
@@ -403,8 +403,8 @@ end
 # Snapshots.   The list of snapshots to create the ebs volumes from.
 #              If it's not nil, must have exactly <num_disks> elements
 
-def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_point_mode, 
-                      num_disks, disk_size, level, filesystem, filesystem_options, 
+def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_point_mode,
+                      num_disks, disk_size, level, filesystem, filesystem_options,
                       snapshots, disk_type, disk_piops, encrypted, encryption_passwd, dm_name)
 
   creating_from_snapshot = !(snapshots.nil? || snapshots.size == 0)
@@ -461,7 +461,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
   # Create the raid device strings w/sd => xvd correction
   devices_string = device_map_to_string(devices)
   Chef::Log.info("finished sorting devices #{devices_string}")
-  
+
   puts "**** creating from snapshot is: #{creating_from_snapshot}"
 
   if not creating_from_snapshot
@@ -475,7 +475,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
       execute "creating luks encrypted partition" do
         command "echo '#{encryption_passwd}' | cryptsetup -v -q luksFormat /dev/#{raid_dev} --key-file=-"
       end
-      
+
       execute "unlocking encrypted partition" do
         command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
       end
@@ -511,7 +511,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
     # Reassembling the raid device on our system
     assemble_raid("/dev/#{raid_dev}", devices_string)
 
-    if encrypted 
+    if encrypted
       execute "unlocking encrypted partition" do
         command "echo '#{encryption_passwd}' | cryptsetup -q luksOpen /dev/#{raid_dev} #{dm_name} --key-file=-"
       end
@@ -522,7 +522,7 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
   manage_udev("start")
 
   # Mount the device
-  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group, 
+  mount_device(raid_dev, mount_point, mount_point_owner, mount_point_group,
                mount_point_mode, filesystem, filesystem_options,
                encrypted, dm_name)
 
@@ -554,4 +554,3 @@ def create_raid_disks(mount_point, mount_point_owner, mount_point_group, mount_p
     end
   end
 end
-
